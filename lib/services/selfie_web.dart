@@ -60,7 +60,15 @@ Future<SelfieCamera> openSelfieCamera() async {
   final web.MediaStream stream;
   try {
     final result = await web.window.navigator.mediaDevices
-        .getUserMedia(web.MediaStreamConstraints(video: true.toJS))
+        .getUserMedia(
+          web.MediaStreamConstraints(
+            video: web.MediaTrackConstraints(
+              facingMode: web.ConstrainDOMStringParameters(
+                ideal: 'user'.toJS,
+              ),
+            ),
+          ),
+        )
         .toDart;
     stream = result;
   } catch (error) {
@@ -71,6 +79,10 @@ Future<SelfieCamera> openSelfieCamera() async {
     ..autoplay = true
     ..muted = true
     ..playsInline = true
+    ..style.width = '100%'
+    ..style.height = '100%'
+    ..style.objectFit = 'cover'
+    ..style.display = 'block'
     ..srcObject = stream;
 
   final viewId = 'selfie-camera-${_viewCounter++}';

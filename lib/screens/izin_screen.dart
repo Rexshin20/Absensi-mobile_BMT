@@ -19,7 +19,9 @@ class IzinScreen extends StatelessWidget {
 
     if (store.leaveTypes.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Belum ada jenis izin aktif. Hubungi admin.')),
+        const SnackBar(
+          content: Text('Belum ada jenis izin aktif. Hubungi admin.'),
+        ),
       );
       return;
     }
@@ -27,14 +29,17 @@ class IzinScreen extends StatelessWidget {
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-        child: _LeaveForm(store: store),
-      ),
+      builder: (context) {
+        final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+        return SingleChildScrollView(
+          padding: EdgeInsets.only(bottom: bottomInset),
+          child: _LeaveForm(store: store),
+        );
+      },
     );
   }
 
@@ -44,6 +49,7 @@ class IzinScreen extends StatelessWidget {
       listenable: store,
       builder: (context, _) {
         final leaves = store.leaves;
+        final colors = Theme.of(context).colorScheme;
 
         return Scaffold(
           appBar: AppBar(
@@ -58,31 +64,33 @@ class IzinScreen extends StatelessWidget {
           ),
           floatingActionButton: FloatingActionButton.extended(
             heroTag: 'ajukan-izin',
-            backgroundColor: brandPrimary,
-            foregroundColor: Colors.white,
+            backgroundColor: colors.primary,
+            foregroundColor: colors.onPrimary,
             onPressed: () => _openForm(context),
             icon: const Icon(Icons.add),
             label: const Text('Ajukan Izin'),
           ),
-          body: RefreshIndicator(
-            onRefresh: store.refresh,
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
-              children: [
-                if (store.error != null) ...[
-                  ErrorBanner(message: store.error!, onRetry: store.refresh),
-                  const SizedBox(height: 12),
+          body: ResponsivePage(
+            child: RefreshIndicator(
+              onRefresh: store.refresh,
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
+                children: [
+                  if (store.error != null) ...[
+                    ErrorBanner(message: store.error!, onRetry: store.refresh),
+                    const SizedBox(height: 12),
+                  ],
+                  if (leaves.isEmpty)
+                    const SectionCard(
+                      child: EmptyState(
+                        icon: Icons.event_note_outlined,
+                        message: 'Belum ada pengajuan izin. Tekan tombol Ajukan Izin di bawah.',
+                      ),
+                    )
+                  else
+                    ...leaves.map((leave) => _leaveTile(context, leave)),
                 ],
-                if (leaves.isEmpty)
-                  const SectionCard(
-                    child: EmptyState(
-                      icon: Icons.event_note_outlined,
-                      message: 'Belum ada pengajuan izin. Tekan tombol Ajukan Izin di bawah kanan.',
-                    ),
-                  )
-                else
-                  ...leaves.map(_leaveTile),
-              ],
+              ),
             ),
           ),
         );
@@ -90,7 +98,8 @@ class IzinScreen extends StatelessWidget {
     );
   }
 
-  Widget _leaveTile(LeaveRecord leave) {
+  Widget _leaveTile(BuildContext context, LeaveRecord leave) {
+    final colors = Theme.of(context).colorScheme;
     final range = leave.startDate == leave.endDate
         ? prettyDate(leave.startDate)
         : '${prettyDate(leave.startDate)} - ${prettyDate(leave.endDate)}';
@@ -106,10 +115,10 @@ class IzinScreen extends StatelessWidget {
                 Expanded(
                   child: Text(
                     leave.type ?? 'Izin',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14.5,
                       fontWeight: FontWeight.w700,
-                      color: textStrong,
+                      color: colors.onSurface,
                     ),
                   ),
                 ),
@@ -123,13 +132,17 @@ class IzinScreen extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               '$range · ${leave.days} hari kerja',
-              style: const TextStyle(fontSize: 12.5, color: textMuted),
+              style: TextStyle(fontSize: 12.5, color: colors.onSurfaceVariant),
             ),
             if (leave.note != null && leave.note!.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
                 leave.note!,
-                style: const TextStyle(fontSize: 13, color: textStrong, height: 1.35),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: colors.onSurface,
+                  height: 1.35,
+                ),
               ),
             ],
             if (leave.reason != null && leave.reason!.isNotEmpty) ...[
@@ -203,7 +216,10 @@ class _LeaveFormState extends State<_LeaveForm> {
     final note = _note.text.trim();
 
     if (_type == null || note.length < 5) {
-      setState(() => _error = 'Pilih jenis izin dan tulis keterangan minimal 5 karakter.');
+      setState(
+        () => _error =
+            'Pilih jenis izin dan tulis keterangan minimal 5 karakter.',
+      );
       return;
     }
 
@@ -235,92 +251,119 @@ class _LeaveFormState extends State<_LeaveForm> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const CardTitle(
-            title: 'Ajukan Izin',
-            subtitle: 'Pengajuan diperiksa oleh admin sebelum disetujui.',
-          ),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<LeaveTypeOption>(
-            initialValue: _type,
-            items: widget.store.leaveTypes
-                .map(
-                  (type) => DropdownMenuItem(
-                    value: type,
-                    child: Text(type.name, style: const TextStyle(fontSize: 14)),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const CardTitle(
+                title: 'Ajukan Izin',
+                subtitle: 'Pengajuan diperiksa oleh admin sebelum disetujui.',
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<LeaveTypeOption>(
+                initialValue: _type,
+                items: widget.store.leaveTypes
+                    .map(
+                      (type) => DropdownMenuItem(
+                        value: type,
+                        child: Text(
+                          type.name,
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    )
+                    .toList(),
+                hint: const Text('Pilih jenis izin'),
+                onChanged: (value) => setState(() => _type = value),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _dateField(
+                      'Mulai',
+                      _start,
+                      () => _pickDate(isStart: true),
+                    ),
                   ),
-                )
-                .toList(),
-            hint: const Text('Pilih jenis izin'),
-            onChanged: (value) => setState(() => _type = value),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: _dateField('Mulai', _start, () => _pickDate(isStart: true))),
-              const SizedBox(width: 10),
-              Expanded(child: _dateField('Selesai', _end, () => _pickDate(isStart: false))),
-            ],
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _note,
-            maxLines: 3,
-            maxLength: 1000,
-            decoration: const InputDecoration(
-              hintText: 'Keterangan izin',
-              alignLabelWithHint: true,
-            ),
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              _error!,
-              style: const TextStyle(fontSize: 12.5, color: errorMain),
-            ),
-          ],
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _saving ? null : () => Navigator.of(context).pop(),
-                  child: const Text('Batal'),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _dateField(
+                      'Selesai',
+                      _end,
+                      () => _pickDate(isStart: false),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _note,
+                maxLines: 3,
+                maxLength: 1000,
+                decoration: const InputDecoration(
+                  hintText: 'Keterangan izin',
+                  alignLabelWithHint: true,
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _saving ? null : _submit,
-                  child: _saving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text('Kirim Pengajuan'),
+              if (_error != null) ...[
+                const SizedBox(height: 4),
+                Text(
+                  _error!,
+                  style: const TextStyle(fontSize: 12.5, color: errorMain),
                 ),
+              ],
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _saving
+                          ? null
+                          : () => Navigator.of(context).pop(),
+                      child: const Text('Batal'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: _saving ? null : _submit,
+                      child: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text('Kirim Pengajuan'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _dateField(String label, DateTime value, VoidCallback onTap) {
+    final colors = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
       child: InputDecorator(
         decoration: InputDecoration(labelText: label),
         child: Text(
           longDate(value).split(', ').last,
-          style: const TextStyle(fontSize: 14, color: textStrong),
+          style: TextStyle(fontSize: 14, color: colors.onSurface),
         ),
       ),
     );

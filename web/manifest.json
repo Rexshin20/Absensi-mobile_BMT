@@ -1,11 +1,11 @@
 {
-    "name": "absensi_mobile",
-    "short_name": "absensi_mobile",
+    "name": "Absensi BMT Cinde Barokah",
+    "short_name": "Absensi BMT",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F4F8F5",
+    "theme_color": "#087A45",
+    "description": "Sistem Absensi Karyawan BMT Cinde Barokah.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

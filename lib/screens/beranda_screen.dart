@@ -57,29 +57,27 @@ class _BerandaScreenState extends State<BerandaScreen> {
         return Scaffold(
           body: SafeArea(
             bottom: false,
-            child: RefreshIndicator(
-              onRefresh: store.refresh,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-                children: [
-                  if (info == null)
-                    _loadingOrError(store)
-                  else ...[
-                    _topBar(store),
-                    const SizedBox(height: 14),
-                    _identityCard(store),
-                    const SizedBox(height: 12),
-                    _checkInCard(store),
-                    const SizedBox(height: 12),
-                    _mapCard(store),
-                    const SizedBox(height: 12),
-                    _summaryCard(store),
-                    const SizedBox(height: 12),
-                    _quickActions(store),
-                    const SizedBox(height: 12),
-                    _rulesCard(store),
+            child: ResponsivePage(
+              child: RefreshIndicator(
+                onRefresh: store.refresh,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                  children: [
+                    if (info == null)
+                      _loadingOrError(store)
+                    else ...[
+                      _topBar(store),
+                      SizedBox(height: info.today == null ? 8 : 14),
+                      if (info.today != null) ...[
+                        _checkInCard(store),
+                        const SizedBox(height: 12),
+                      ],
+                      _quickActions(store),
+                      const SizedBox(height: 12),
+                      _mapCard(store),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -89,110 +87,126 @@ class _BerandaScreenState extends State<BerandaScreen> {
   }
 
   Widget _topBar(AppStore store) {
-    final office = store.user?.employee?.office;
-
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: borderSoft),
-          ),
-          child: const Icon(Icons.account_balance, size: 22, color: brandPrimary),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                office?.name ?? 'Belum ada kantor',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: textStrong,
-                ),
-              ),
-              Text(
-                office == null
-                    ? 'Lokasi kantor belum diatur admin'
-                    : 'Radius absen ${office.radiusM} m',
-                style: const TextStyle(fontSize: 12, color: textMuted),
-              ),
-            ],
-          ),
-        ),
-        IconButton(
-          tooltip: 'Muat ulang',
-          onPressed: store.loading ? null : store.refresh,
-          icon: const Icon(Icons.refresh, color: textMuted),
-        ),
-      ],
-    );
-  }
-
-  Widget _identityCard(AppStore store) {
     final user = store.user!;
     final employee = user.employee;
 
-    return SectionCard(
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: brandPrimary.withValues(alpha: 0.12),
-            child: Text(
-              initials(employee?.name ?? user.name),
-              style: const TextStyle(
-                color: brandPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: 16,
-              ),
-            ),
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFF159957), brandDark],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(
+            color: brandDark.withValues(alpha: 0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  employee?.name ?? user.name,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: textStrong,
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                padding: const EdgeInsets.all(3),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(11),
+                  child: Image.asset(
+                    'assets/images/logo_bmt.png',
+                    fit: BoxFit.cover,
+                    semanticLabel: 'Logo BMT Cinde Barokah',
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  [
-                    if (employee?.position != null) employee!.position!,
-                    if (employee?.division != null) employee!.division!,
-                  ].join(' · '),
-                  style: const TextStyle(fontSize: 12.5, color: textMuted),
+              ),
+              const SizedBox(width: 11),
+              Expanded(
+                child: const Text(
+                  'BMT CINDE BAROKAH',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.35,
+                  ),
                 ),
-              ],
+              ),
+              IconButton(
+                tooltip: 'Muat ulang',
+                onPressed: store.loading ? null : store.refresh,
+                style: IconButton.styleFrom(
+                  backgroundColor: Colors.white.withValues(alpha: 0.12),
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.refresh, size: 20),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Assalamu’alaikum,',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.82),
+              fontSize: 13,
             ),
           ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          const SizedBox(height: 3),
+          Text(
+            employee?.name ?? user.name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 21,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
             children: [
+              Expanded(
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.calendar_today_outlined,
+                      size: 15,
+                      color: Colors.white70,
+                    ),
+                    const SizedBox(width: 7),
+                    Flexible(
+                      child: Text(
+                        longDate(_now),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11.5,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               Text(
                 clockTime(_now),
                 style: const TextStyle(
-                  fontSize: 16,
+                  color: Colors.white,
+                  fontSize: 15,
                   fontWeight: FontWeight.w700,
-                  color: brandPrimary,
                   fontFeatures: [FontFeature.tabularFigures()],
                 ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                longDate(_now),
-                style: const TextStyle(fontSize: 11, color: textMuted),
               ),
             ],
           ),
@@ -204,6 +218,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
   Widget _checkInCard(AppStore store) {
     final today = store.info?.today;
     final alreadyIn = today != null;
+    final colors = Theme.of(context).colorScheme;
 
     return SectionCard(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
@@ -221,10 +236,10 @@ class _BerandaScreenState extends State<BerandaScreen> {
               Expanded(
                 child: Text(
                   alreadyIn ? 'Sudah absen hari ini' : 'Belum absen hari ini',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: textStrong,
+                    color: colors.onSurface,
                   ),
                 ),
               ),
@@ -237,27 +252,11 @@ class _BerandaScreenState extends State<BerandaScreen> {
             ],
           ),
           const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: _timeSlot(
-                  label: 'Absen Masuk',
-                  value: alreadyIn ? '${today.checkInTime} WIB' : '--:-- WIB',
-                  caption: 'Batas ${store.info!.workStart} WIB',
-                  highlight: alreadyIn,
-                ),
-              ),
-              Container(width: 1, height: 54, color: borderSoft),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _timeSlot(
-                  label: 'Absen Pulang',
-                  value: '--:-- WIB',
-                  caption: 'Belum tersedia di BMT',
-                  highlight: false,
-                ),
-              ),
-            ],
+          _timeSlot(
+            label: 'Absen Masuk',
+            value: alreadyIn ? '${today.checkInTime} WIB' : '--:-- WIB',
+            caption: 'Batas ${store.info!.workStart} WIB',
+            highlight: alreadyIn,
           ),
           const SizedBox(height: 14),
           if (alreadyIn && today.photoUrl != null) _photoStrip(today),
@@ -270,8 +269,8 @@ class _BerandaScreenState extends State<BerandaScreen> {
               alreadyIn
                   ? 'Absen tercatat ${today.checkInTime} WIB'
                   : store.submitting
-                      ? 'Mengirim absen...'
-                      : 'Absen dengan Foto & Lokasi',
+                  ? 'Mengirim absen...'
+                  : 'Absen dengan Foto & Lokasi',
             ),
           ),
         ],
@@ -285,27 +284,29 @@ class _BerandaScreenState extends State<BerandaScreen> {
     required String caption,
     required bool highlight,
   }) {
+    final colors = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: textMuted)),
+        Text(label, style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant)),
         const SizedBox(height: 4),
         Text(
           value,
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w700,
-            color: highlight ? textStrong : const Color(0xFFB9B4C4),
+            color: highlight ? colors.onSurface : colors.onSurfaceVariant,
             fontFeatures: const [FontFeature.tabularFigures()],
           ),
         ),
         const SizedBox(height: 2),
-        Text(caption, style: const TextStyle(fontSize: 11, color: textMuted)),
+        Text(caption, style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant)),
       ],
     );
   }
 
   Widget _photoStrip(TodayAttendance today) {
+    final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -320,8 +321,12 @@ class _BerandaScreenState extends State<BerandaScreen> {
               errorBuilder: (context, error, stack) => Container(
                 width: 46,
                 height: 46,
-                color: surfaceMuted,
-                child: const Icon(Icons.broken_image, size: 20, color: textMuted),
+                color: colors.surfaceContainerHighest,
+                child: Icon(
+                  Icons.broken_image,
+                  size: 20,
+                  color: colors.onSurfaceVariant,
+                ),
               ),
             ),
           ),
@@ -329,7 +334,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
           Expanded(
             child: Text(
               'Foto absen tersimpan${today.office == null ? '.' : ' di ${today.office}.'}',
-              style: const TextStyle(fontSize: 12.5, color: textMuted),
+              style: TextStyle(fontSize: 12.5, color: colors.onSurfaceVariant),
             ),
           ),
         ],
@@ -339,6 +344,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
 
   Widget _mapCard(AppStore store) {
     final office = store.user?.employee?.office;
+    final colors = Theme.of(context).colorScheme;
 
     if (office == null) {
       return const SectionCard(
@@ -369,122 +375,106 @@ class _BerandaScreenState extends State<BerandaScreen> {
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Row(
               children: [
-                const Icon(Icons.straighten, size: 16, color: textMuted),
+                Icon(Icons.straighten, size: 16, color: colors.onSurfaceVariant),
                 const SizedBox(width: 6),
-                Text(
-                  '${office.name} · radius ${office.radiusM} m',
-                  style: const TextStyle(fontSize: 12.5, color: textMuted),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _summaryCard(AppStore store) {
-    final summary = store.history?.summary;
-
-    return SectionCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CardTitle(
-            title: 'Rekap ${monthLabel(store.month)}',
-            subtitle: summary == null
-                ? 'Memuat rekap...'
-                : '${summary.total} dari ${summary.workDays} hari kerja sudah absen',
-          ),
-          const SizedBox(height: 14),
-          if (summary == null)
-            const LinearProgressIndicator(minHeight: 4)
-          else
-            Row(
-              children: [
                 Expanded(
-                  child: StatBox(
-                    value: '${summary.present}',
-                    label: 'Tepat Waktu',
-                    color: successMain,
-                  ),
-                ),
-                Expanded(
-                  child: StatBox(
-                    value: '${summary.late}',
-                    label: 'Terlambat',
-                    color: errorMain,
-                  ),
-                ),
-                Expanded(
-                  child: StatBox(
-                    value: '${summary.leave}',
-                    label: 'Hari Izin',
-                    color: warningMain,
-                  ),
-                ),
-                Expanded(
-                  child: StatBox(
-                    value: '${summary.workDays}',
-                    label: 'Hari Kerja',
-                    color: brandPrimary,
+                  child: Text(
+                    '${office.name} · radius ${office.radiusM} m',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: colors.onSurfaceVariant,
+                    ),
                   ),
                 ),
               ],
             ),
+          ),
         ],
       ),
     );
   }
 
   Widget _quickActions(AppStore store) {
-    final pending = store.leaves.where((leave) => leave.isPending).length;
-
-    return Row(
-      children: [
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: widget.onOpenIzin,
-            icon: const Icon(Icons.event_available, size: 20),
-            label: Text(pending > 0 ? 'Izin ($pending)' : 'Ajukan Izin'),
-          ),
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: OutlinedButton.icon(
-            onPressed: widget.onOpenRiwayat,
-            icon: const Icon(Icons.history, size: 20),
-            label: const Text('Riwayat Absen'),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _rulesCard(AppStore store) {
-    final info = store.info!;
-    final office = store.user?.employee?.office;
-
     return SectionCard(
+      padding: const EdgeInsets.all(10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const CardTitle(title: 'Ketentuan Absen'),
-          const SizedBox(height: 10),
-          InfoRow(
-            label: 'Kantor',
-            value: office == null
-                ? 'Belum diatur admin'
-                : '${office.name} (radius ${office.radiusM} m)',
-          ),
-          InfoRow(label: 'Jam masuk', value: '${info.workStart} WIB'),
-          InfoRow(label: 'Hari kerja', value: workDayNames(info.workDays)),
-          const InfoRow(
-            label: 'Cara absen',
-            value: 'Foto selfie + lokasi GPS, satu kali per hari.',
-            labelWidth: 96,
+          const CardTitle(title: 'Menu Utama'),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              _menuTile(
+                leading: Image.asset(
+                  'assets/images/menu_izin.png',
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.contain,
+                  semanticLabel: 'Ilustrasi pengajuan izin',
+                ),
+                label: 'Izin',
+                onTap: widget.onOpenIzin,
+              ),
+              const SizedBox(width: 8),
+              _menuTile(
+                leading: Image.asset(
+                  'assets/images/menu_riwayat.png',
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.contain,
+                  semanticLabel: 'Ilustrasi riwayat absensi',
+                ),
+                label: 'Riwayat\nAbsen',
+                onTap: widget.onOpenRiwayat,
+              ),
+            ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _menuTile({
+    required Widget leading,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return SizedBox(
+      width: 104,
+      height: 88,
+      child: Material(
+        color: colors.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(14),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                leading,
+                const SizedBox(height: 4),
+                Text(
+                  label,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface,
+                    height: 1.15,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

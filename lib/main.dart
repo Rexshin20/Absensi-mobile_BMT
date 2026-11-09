@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'theme_preferences.dart';
 import 'api.dart';
 import 'app_theme.dart';
 import 'screens/absen_screen.dart';
@@ -10,27 +11,68 @@ import 'screens/profil_screen.dart';
 import 'screens/riwayat_screen.dart';
 import 'store.dart';
 import 'widgets/absen_bottom_bar.dart';
+import 'widgets/app_splash_screen.dart';
 
 void main() {
   runApp(const AbsensiApp());
 }
 
-class AbsensiApp extends StatelessWidget {
+class AbsensiApp extends StatefulWidget {
   const AbsensiApp({super.key});
+
+  @override
+  State<AbsensiApp> createState() => _AbsensiAppState();
+}
+
+class _AbsensiAppState extends State<AbsensiApp> {
+  ThemeMode _themeMode = ThemeMode.system;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThemeMode();
+  }
+
+  Future<void> _loadThemeMode() async {
+    try {
+      final themeMode = await loadThemeMode();
+      if (mounted) setState(() => _themeMode = themeMode);
+    } catch (error, stackTrace) {
+      debugPrint('Failed to load theme preference: $error');
+      debugPrintStack(stackTrace: stackTrace);
+    }
+  }
+
+  Future<void> _setThemeMode(ThemeMode themeMode) async {
+    await saveThemeMode(themeMode);
+    if (mounted) setState(() => _themeMode = themeMode);
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Absensi BMT Cinde Barokah',
+      title: 'Absensi BMT',
       debugShowCheckedModeBanner: false,
       theme: buildAppTheme(),
-      home: const AuthGate(),
+      darkTheme: buildAppDarkTheme(),
+      themeMode: _themeMode,
+      home: AuthGate(
+        themeMode: _themeMode,
+        onThemeModeChanged: _setThemeMode,
+      ),
     );
   }
 }
 
 class AuthGate extends StatefulWidget {
-  const AuthGate({super.key});
+  const AuthGate({
+    super.key,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+  });
+
+  final ThemeMode themeMode;
+  final Future<void> Function(ThemeMode) onThemeModeChanged;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -54,8 +96,12 @@ class _AuthGateState extends State<AuthGate> {
       try {
         await _store.refresh();
         signedIn = true;
-      } on ApiException {
-        await api.forgetSession();
+      } on ApiException catch (error) {
+        if (error.isUnauthorized) {
+          await api.forgetSession();
+        } else {
+          signedIn = true;
+        }
       }
     }
 
@@ -67,7 +113,14 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _signIn() async {
-    await _store.refresh();
+    try {
+      await _store.refresh();
+    } on ApiException catch (error) {
+      if (error.isUnauthorized) {
+        await api.forgetSession();
+        rethrow;
+      }
+    }
     if (!mounted) return;
     setState(() => _signedIn = true);
   }
@@ -79,24 +132,35 @@ class _AuthGateState extends State<AuthGate> {
   @override
   Widget build(BuildContext context) {
     if (_restoring) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator(color: brandPrimary)),
-      );
+      return const AppSplashScreen();
     }
 
     if (!_signedIn) {
       return LoginScreen(onLoggedIn: _signIn);
     }
 
-    return RootShell(store: _store, onLoggedOut: _signOut);
+    return RootShell(
+      store: _store,
+      onLoggedOut: _signOut,
+      themeMode: widget.themeMode,
+      onThemeModeChanged: widget.onThemeModeChanged,
+    );
   }
 }
 
 class RootShell extends StatefulWidget {
-  const RootShell({super.key, required this.store, required this.onLoggedOut});
+  const RootShell({
+    super.key,
+    required this.store,
+    required this.onLoggedOut,
+    required this.themeMode,
+    required this.onThemeModeChanged,
+  });
 
   final AppStore store;
   final VoidCallback onLoggedOut;
+  final ThemeMode themeMode;
+  final Future<void> Function(ThemeMode) onThemeModeChanged;
 
   @override
   State<RootShell> createState() => _RootShellState();
@@ -127,7 +191,12 @@ class _RootShellState extends State<RootShell> {
           ),
           RiwayatScreen(store: widget.store),
           IzinScreen(store: widget.store),
-          ProfilScreen(store: widget.store, onLoggedOut: widget.onLoggedOut),
+          ProfilScreen(
+            store: widget.store,
+            onLoggedOut: widget.onLoggedOut,
+            themeMode: widget.themeMode,
+            onThemeModeChanged: widget.onThemeModeChanged,
+          ),
         ],
       ),
       bottomNavigationBar: AbsenBottomBar(

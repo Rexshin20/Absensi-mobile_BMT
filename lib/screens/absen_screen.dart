@@ -195,258 +195,470 @@ class _AbsenScreenState extends State<AbsenScreen> with WidgetsBindingObserver {
     final inside = distance != null && office != null && distance <= office.radiusM;
 
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          _preview(),
-          SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
-                  child: _infoCard(office?.name, distance, inside, alreadyIn),
-                ),
-                const Spacer(),
-                _bottomBar(photoTaken: _captured != null, disabled: alreadyIn),
-              ],
-            ),
-          ),
-          Positioned(
-            top: 6,
-            left: 4,
-            child: SafeArea(
-              child: IconButton(
-                tooltip: 'Tutup',
-                onPressed: () => Navigator.of(context).pop(),
-                icon: const Icon(Icons.close, color: Colors.white),
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              child: Column(
+                children: [
+                  _header(),
+                  const SizedBox(height: 12),
+                  _locationCard(office?.name, distance, inside, alreadyIn),
+                  const SizedBox(height: 12),
+                  Expanded(child: _previewCard()),
+                  const SizedBox(height: 12),
+                  _actionPanel(
+                    canCheckIn: office != null && _position != null && inside,
+                    alreadyIn: alreadyIn,
+                  ),
+                ],
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _preview() {
-    final photo = _captured;
-    if (photo != null) {
-      return Image.memory(photo.bytes, fit: BoxFit.cover, errorBuilder: (context, _, _) => const SizedBox.shrink());
-    }
-
-    if (_cameraLoading) {
-      return const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(color: brandPrimary),
-            SizedBox(height: 12),
-            Text('Membuka kamera...', style: TextStyle(color: Colors.white70, fontSize: 13)),
-          ],
         ),
-      );
-    }
-
-    if (_cameraError != null) {
-      return _retryPanel(
-        icon: Icons.no_photography_outlined,
-        message: _cameraError!,
-        actionLabel: 'Coba lagi',
-        onAction: _openCamera,
-      );
-    }
-
-    final camera = _camera;
-    if (camera == null) {
-      return const Center(child: CircularProgressIndicator(color: brandPrimary));
-    }
-    return camera.buildPreview();
-  }
-
-  Widget _retryPanel({
-    required IconData icon,
-    required String message,
-    required String actionLabel,
-    required VoidCallback onAction,
-  }) {
-    return Container(
-      color: const Color(0xFF15131A),
-      padding: const EdgeInsets.all(28),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 44, color: Colors.white54),
-          const SizedBox(height: 14),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
-          ),
-          const SizedBox(height: 18),
-          FilledButton(
-            style: FilledButton.styleFrom(minimumSize: const Size(160, 46)),
-            onPressed: onAction,
-            child: Text(actionLabel),
-          ),
-        ],
       ),
     );
   }
 
-  Widget _infoCard(String? officeName, double? distance, bool inside, bool alreadyIn) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+  Widget _header() {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      children: [
+        IconButton.outlined(
+          tooltip: 'Kembali',
+          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back_rounded),
+          style: IconButton.styleFrom(
+            foregroundColor: colors.primary,
+            side: BorderSide(color: colors.outline),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.location_on, size: 16, color: Colors.white),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  officeName == null ? 'Kantor belum diatur' : 'Target: $officeName',
-                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+              Text(
+                'Absen masuk',
+                style: TextStyle(
+                  color: colors.onSurface,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-              IconButton(
-                tooltip: 'Perbarui lokasi',
-                visualDensity: VisualDensity.compact,
-                onPressed: _locating ? null : _locate,
-                icon: Icon(Icons.refresh, size: 18, color: Colors.white70),
+              const SizedBox(height: 2),
+              Text(
+                'Ambil foto selfie sebagai bukti kehadiran',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          if (alreadyIn)
-            const _Pill(
-              label: 'Kamu sudah absen hari ini',
-              color: warningMain,
-              icon: Icons.lock_outline,
-            )
-          else if (_locating)
-            const _Pill(label: 'Mengambil lokasi GPS...', color: Colors.white, icon: Icons.gps_fixed)
-          else if (_locationError != null)
-            _Pill(label: _locationError!, color: errorMain, icon: Icons.gps_off)
-          else if (distance == null)
-            const _Pill(label: 'Koordinat kantor belum tersedia', color: Colors.white, icon: Icons.warning_amber)
-          else
-            _Pill(
-              label: '${formatDistance(distance)} dari kantor · ${inside ? 'dalam radius' : 'di luar radius'}',
-              color: inside ? const Color(0xFF66D275) : errorMain,
-              icon: inside ? Icons.gps_fixed : Icons.report_gmailerrorred,
-            ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _previewCard() {
+    final photo = _captured;
+    final camera = _camera;
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: Container(
+        width: double.infinity,
+        color: const Color(0xFF18221C),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (photo != null)
+              Image.memory(
+                photo.bytes,
+                fit: BoxFit.cover,
+                errorBuilder: (context, _, _) => _cameraPlaceholder(
+                  icon: Icons.broken_image_outlined,
+                  title: 'Foto tidak dapat ditampilkan',
+                  message: 'Ambil ulang foto untuk melanjutkan.',
+                ),
+              )
+            else if (_cameraLoading)
+              _cameraPlaceholder(
+                icon: Icons.camera_alt_outlined,
+                title: 'Menyiapkan kamera',
+                message: 'Mohon tunggu sebentar.',
+                loading: true,
+              )
+            else if (_cameraError != null)
+              _cameraPlaceholder(
+                icon: Icons.no_photography_outlined,
+                title: 'Kamera belum tersedia',
+                message: _cameraError!,
+              )
+            else if (camera != null)
+              camera.buildPreview()
+            else
+              _cameraPlaceholder(
+                icon: Icons.camera_alt_outlined,
+                title: 'Kamera belum siap',
+                message: 'Coba buka kamera kembali.',
+              ),
+            if (!_cameraLoading && _cameraError == null && photo == null)
+              Positioned(
+                top: 14,
+                left: 14,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.48),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.face_retouching_natural,
+                        size: 16,
+                        color: Colors.white,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Posisikan wajah di tengah',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (photo != null)
+              Positioned(
+                top: 14,
+                left: 14,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 11,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
+                    color: brandDark.withValues(alpha: 0.9),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle, size: 16, color: Colors.white),
+                      SizedBox(width: 6),
+                      Text(
+                        'Foto siap diperiksa',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _bottomBar({required bool photoTaken, required bool disabled}) {
-    final submitting = widget.store.submitting;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 22),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          if (photoTaken)
-            _circleAction(
-              icon: Icons.refresh,
-              label: 'Ambil Ulang',
-              onTap: submitting ? null : () => setState(() => _captured = null),
-            )
-          else
-            const SizedBox(width: 74),
-          _circleAction(
-            icon: photoTaken ? Icons.check : Icons.camera_alt,
-            label: photoTaken ? 'Kirim Absen' : 'Ambil Foto',
-            big: true,
-            onTap: disabled || submitting
-                ? null
-                : photoTaken
-                    ? _submit
-                    : _capture,
-            busy: submitting,
-          ),
-          _circleAction(
-            icon: Icons.my_location,
-            label: 'Cek Lokasi',
-            onTap: _locating ? null : _locate,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _circleAction({
+  Widget _cameraPlaceholder({
     required IconData icon,
-    required String label,
-    required VoidCallback? onTap,
-    bool big = false,
-    bool busy = false,
+    required String title,
+    required String message,
+    bool loading = false,
   }) {
-    final size = big ? 74.0 : 58.0;
-    final enabled = onTap != null;
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Ink(
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: enabled ? Colors.white.withValues(alpha: big ? 0.95 : 0.2) : Colors.white24,
-            border: Border.all(color: Colors.white54, width: 2),
-          ),
-          child: InkWell(
-            customBorder: const CircleBorder(),
-            onTap: onTap,
-            child: Center(
-              child: busy
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2.4, color: brandPrimary),
-                    )
-                  : Icon(icon, size: big ? 30 : 22, color: enabled ? brandPrimary : Colors.white54),
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (loading)
+              const CircularProgressIndicator(color: Colors.white)
+            else
+              Icon(icon, size: 42, color: Colors.white70),
+            const SizedBox(height: 14),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
             ),
-          ),
+            const SizedBox(height: 6),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(fontSize: 11.5, color: enabled ? Colors.white : Colors.white54),
-        ),
-      ],
+      ),
     );
   }
-}
 
-class _Pill extends StatelessWidget {
-  const _Pill({required this.label, required this.color, required this.icon});
+  Widget _locationCard(
+    String? officeName,
+    double? distance,
+    bool inside,
+    bool alreadyIn,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+    final Color statusColor;
+    final IconData statusIcon;
+    final String statusText;
 
-  final String label;
-  final Color color;
-  final IconData icon;
+    if (alreadyIn) {
+      statusColor = warningMain;
+      statusIcon = Icons.check_circle_outline;
+      statusText = 'Absensi hari ini sudah tercatat';
+    } else if (_locating) {
+      statusColor = brandPrimary;
+      statusIcon = Icons.gps_fixed;
+      statusText = 'Sedang mencari lokasi perangkat...';
+    } else if (_locationError != null) {
+      statusColor = errorMain;
+      statusIcon = Icons.gps_off;
+      statusText = _locationError!;
+    } else if (distance == null) {
+      statusColor = warningMain;
+      statusIcon = Icons.location_searching;
+      statusText = 'Lokasi kantor belum tersedia';
+    } else if (inside) {
+      statusColor = successMain;
+      statusIcon = Icons.check_circle;
+      statusText = 'Kamu berada dalam radius absen';
+    } else {
+      statusColor = errorMain;
+      statusIcon = Icons.location_off;
+      statusText = 'Kamu berada di luar radius absen';
+    }
 
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 15, color: color),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Text(
-            label,
-            style: TextStyle(fontSize: 12.5, color: color, fontWeight: FontWeight.w600),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 11, 8, 11),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: colors.outline),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.location_on_outlined, color: statusColor),
           ),
-        ),
-      ],
+          const SizedBox(width: 11),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  officeName ?? 'Kantor belum diatur',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: colors.onSurface,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(statusIcon, size: 15, color: statusColor),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      child: Text(
+                        statusText,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 11.5,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (distance != null && !alreadyIn) ...[
+                  const SizedBox(height: 3),
+                  Text(
+                    'Jarak ke kantor ${formatDistance(distance)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Perbarui lokasi',
+            onPressed: _locating ? null : _locate,
+            style: IconButton.styleFrom(foregroundColor: brandPrimary),
+            icon: _locating
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh_rounded),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actionPanel({
+    required bool canCheckIn,
+    required bool alreadyIn,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    final submitting = widget.store.submitting;
+    final photoTaken = _captured != null;
+    final cameraReady = _camera != null && !_cameraLoading;
+    final canTakePhoto = cameraReady && !alreadyIn && !submitting;
+    final canSubmit = photoTaken &&
+        canCheckIn &&
+        !alreadyIn &&
+        !submitting;
+
+    final String helperText;
+    if (alreadyIn) {
+      helperText = 'Absensi untuk hari ini sudah tercatat.';
+    } else if (_cameraError != null) {
+      helperText = 'Izinkan akses kamera, lalu coba buka kembali.';
+    } else if (!photoTaken) {
+      helperText = 'Pastikan wajah terlihat jelas sebelum mengambil foto.';
+    } else if (!canCheckIn) {
+      helperText = 'Kirim absen aktif setelah lokasi berada dalam radius kantor.';
+    } else {
+      helperText = 'Periksa foto, lalu tekan Kirim Absen.';
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: colors.outline),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            helperText,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: colors.onSurfaceVariant,
+              fontSize: 12,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 10),
+          if (photoTaken)
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: submitting
+                        ? null
+                        : () => setState(() => _captured = null),
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text('Ambil Ulang'),
+                    style: OutlinedButton.styleFrom(
+                      minimumSize: const Size.fromHeight(52),
+                      foregroundColor: brandPrimary,
+                      side: const BorderSide(color: brandPrimary),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: canSubmit ? _submit : null,
+                    icon: submitting
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.check_rounded),
+                    label: Text(submitting ? 'Mengirim...' : 'Kirim Absen'),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            )
+          else
+            FilledButton.icon(
+              onPressed: _cameraError != null
+                  ? _openCamera
+                  : canTakePhoto
+                  ? _capture
+                  : null,
+              icon: _cameraLoading
+                  ? const SizedBox(
+                      width: 19,
+                      height: 19,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : Icon(
+                      _cameraError != null
+                          ? Icons.refresh_rounded
+                          : Icons.camera_alt_rounded,
+                    ),
+              label: Text(_cameraError != null ? 'Buka Kamera Lagi' : 'Ambil Foto'),
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(54),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
