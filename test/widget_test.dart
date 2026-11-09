@@ -1,9 +1,13 @@
+import 'dart:typed_data';
+
 import 'package:absensi_mobile/screens/login_screen.dart';
 import 'package:absensi_mobile/app_theme.dart';
+import 'package:absensi_mobile/services/selfie_image.dart';
 import 'package:absensi_mobile/widgets/ui.dart';
 import 'package:absensi_mobile/widgets/app_splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:absensi_mobile/theme_preferences.dart';
@@ -27,6 +31,29 @@ void main() {
   test('app themes support light and dark system brightness', () {
     expect(buildAppTheme().brightness, Brightness.light);
     expect(buildAppDarkTheme().brightness, Brightness.dark);
+  });
+
+  test('selfie capture mirrors the camera image horizontally', () {
+    final source = img.Image(width: 64, height: 32);
+    for (var y = 0; y < source.height; y++) {
+      for (var x = 0; x < source.width; x++) {
+        source.setPixelRgb(x, y, x < 32 ? 255 : 0, 0, x < 32 ? 0 : 255);
+      }
+    }
+
+    final mirrored = img.decodeImage(
+      mirrorSelfieImage(Uint8List.fromList(img.encodePng(source))),
+    );
+
+    expect(mirrored, isNotNull);
+    expect(
+      mirrored!.getPixel(8, 16).b,
+      greaterThan(mirrored.getPixel(8, 16).r),
+    );
+    expect(
+      mirrored.getPixel(56, 16).r,
+      greaterThan(mirrored.getPixel(56, 16).b),
+    );
   });
 
   testWidgets('app splash shows brand and version without a spinner', (

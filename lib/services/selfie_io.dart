@@ -1,12 +1,14 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/widgets.dart';
 
+import 'selfie_image.dart';
 import 'selfie_types.dart';
 
 class _CameraPackageSelfie implements SelfieCamera {
-  _CameraPackageSelfie(this._controller);
+  _CameraPackageSelfie(this._controller, {required this.mirrorCapture});
 
   final CameraController _controller;
+  final bool mirrorCapture;
 
   @override
   Widget buildPreview() => CameraPreview(_controller);
@@ -14,7 +16,10 @@ class _CameraPackageSelfie implements SelfieCamera {
   @override
   Future<SelfieShot> capture() async {
     final file = await _controller.takePicture();
-    return SelfieShot(bytes: await file.readAsBytes());
+    final bytes = await file.readAsBytes();
+    return SelfieShot(
+      bytes: mirrorCapture ? mirrorSelfieImage(bytes) : bytes,
+    );
   }
 
   @override
@@ -56,7 +61,10 @@ Future<SelfieCamera> openSelfieCamera() async {
     );
   }
 
-  return _CameraPackageSelfie(controller);
+  return _CameraPackageSelfie(
+    controller,
+    mirrorCapture: front.lensDirection == CameraLensDirection.front,
+  );
 }
 
 Future<void> _disposeAfterFailedInitialization(
