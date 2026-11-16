@@ -142,28 +142,12 @@ void main() {
               padding: const EdgeInsets.all(16),
               children: [
                 SectionCard(
-                  child: StatGrid(
+                  child: MonthLedger(
                     items: const [
-                      StatGridItem(
-                        value: '12',
-                        label: 'Tepat Waktu',
-                        color: Colors.green,
-                      ),
-                      StatGridItem(
-                        value: '2',
-                        label: 'Terlambat',
-                        color: Colors.red,
-                      ),
-                      StatGridItem(
-                        value: '1',
-                        label: 'Hari Izin',
-                        color: Colors.orange,
-                      ),
-                      StatGridItem(
-                        value: '20',
-                        label: 'Hari Kerja',
-                        color: brandPrimary,
-                      ),
+                      LedgerMetric(value: 12, label: 'Tepat waktu'),
+                      LedgerMetric(value: 2, label: 'Terlambat', alert: true),
+                      LedgerMetric(value: 1, label: 'Hari izin'),
+                      LedgerMetric(value: 20, label: 'Hari kerja'),
                     ],
                   ),
                 ),
@@ -176,7 +160,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Tepat Waktu'), findsOneWidget);
-    expect(find.text('Hari Kerja'), findsOneWidget);
+    expect(find.text('Tepat waktu'), findsOneWidget);
+    expect(find.text('Hari kerja'), findsOneWidget);
   });
 }

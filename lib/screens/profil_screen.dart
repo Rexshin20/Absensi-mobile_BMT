@@ -91,8 +91,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       onRetry: widget.store.refresh,
                     ),
                   )
-                : const Center(
-                    child: CircularProgressIndicator(color: brandPrimary),
+                : Center(
+                    child: CircularProgressIndicator(
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
           );
         }
@@ -100,12 +102,15 @@ class _ProfilScreenState extends State<ProfilScreen> {
         final user = info.user;
         final employee = user.employee;
         final office = employee?.office;
+        final radius = office == null
+            ? 'Radius kantor'
+            : 'Radius ${office.radiusM} m';
 
         return Scaffold(
           appBar: AppBar(title: const Text('Profil')),
           body: ResponsivePage(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 104),
               children: [
                 _identityCard(
                   name: employee?.name ?? user.name,
@@ -117,7 +122,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const CardTitle(title: 'Data Karyawan'),
+                      const CardTitle(title: 'Data karyawan'),
                       const SizedBox(height: 14),
                       _dataRow(
                         'Jabatan',
@@ -150,30 +155,26 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const CardTitle(
-                        title: 'Cara Absen',
-                        subtitle:
-                            'Absen masuk satu kali sehari dengan foto selfie dan lokasi. '
-                            'Tidak ada absen pulang.',
+                        title: 'Ketentuan absen',
+                        subtitle: 'Berlaku untuk setiap absen masuk.',
                       ),
                       const SizedBox(height: 14),
-                      const _AttendanceStep(
-                        number: '1',
-                        title: 'Ambil foto selfie',
-                        description: 'Foto menjadi bukti kehadiran dan dapat dilihat admin.',
+                      const _RuleRow(
+                        label: 'Foto selfie',
+                        description: 'Setiap absen wajib menyertakan foto.',
                       ),
-                      const SizedBox(height: 12),
-                      const _AttendanceStep(
-                        number: '2',
-                        title: 'Pastikan lokasi aktif',
-                        description:
-                            'GPS memastikan kamu berada di sekitar kantor.',
+                      Divider(height: 20, color: Theme.of(context).colorScheme.outline),
+                      _RuleRow(
+                        label: radius,
+                        description: office == null
+                            ? 'Admin belum mengatur radius kantor untuk akun ini.'
+                            : 'Absen di luar radius kantor ditolak.',
                       ),
-                      const SizedBox(height: 12),
-                      _AttendanceStep(
-                        number: '3',
-                        title: 'Perhatikan jam masuk',
+                      Divider(height: 20, color: Theme.of(context).colorScheme.outline),
+                      _RuleRow(
+                        label: 'Jam masuk ${info.workStart} WIB',
                         description:
-                            'Absen setelah ${info.workStart} WIB akan tercatat terlambat.',
+                            'Lewat dari jam ini absen tercatat terlambat.',
                       ),
                     ],
                   ),
@@ -181,8 +182,11 @@ class _ProfilScreenState extends State<ProfilScreen> {
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: errorMain,
-                    side: const BorderSide(color: errorMain),
+                    foregroundColor: Theme.of(context).colorScheme.error,
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                    minimumSize: const Size.fromHeight(48),
                   ),
                   onPressed: _loggingOut ? null : () => _logout(context),
                   icon: _loggingOut
@@ -250,22 +254,29 @@ class _ProfilScreenState extends State<ProfilScreen> {
     required ThemeMode themeMode,
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF159957), brandDark],
-        ),
-        borderRadius: BorderRadius.circular(20),
+        color: brandDark,
+        borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 30,
-            backgroundColor: Colors.white.withValues(alpha: 0.16),
-            foregroundColor: Colors.white,
-            child: const Icon(Icons.account_circle_rounded, size: 38),
+          Container(
+            width: 52,
+            height: 52,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              initials(name),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -288,7 +299,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.82),
+                    color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 12,
                   ),
                 ),
@@ -303,11 +314,11 @@ class _ProfilScreenState extends State<ProfilScreen> {
             style: IconButton.styleFrom(
               backgroundColor: Colors.white.withValues(alpha: 0.12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(10),
               ),
             ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(12),
             ),
             onSelected: _changeThemeMode,
             itemBuilder: (context) => [
@@ -379,63 +390,33 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 }
 
-class _AttendanceStep extends StatelessWidget {
-  const _AttendanceStep({
-    required this.number,
-    required this.title,
-    required this.description,
-  });
+class _RuleRow extends StatelessWidget {
+  const _RuleRow({required this.label, required this.description});
 
-  final String number;
-  final String title;
+  final String label;
   final String description;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          width: 28,
-          height: 28,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: colors.primary.withValues(alpha: 0.14),
-            borderRadius: BorderRadius.circular(9),
-          ),
-          child: Text(
-            number,
-            style: TextStyle(
-              color: colors.primary,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: colors.onSurface,
           ),
         ),
-        const SizedBox(width: 11),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: colors.onSurface,
-                  fontSize: 12.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                description,
-                style: TextStyle(
-                  color: colors.onSurfaceVariant,
-                  fontSize: 11.5,
-                  height: 1.4,
-                ),
-              ),
-            ],
+        const SizedBox(height: 3),
+        Text(
+          description,
+          style: TextStyle(
+            fontSize: 11.5,
+            height: 1.4,
+            color: colors.onSurfaceVariant,
           ),
         ),
       ],

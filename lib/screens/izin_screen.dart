@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
-import '../app_theme.dart';
 import '../formatters.dart';
 import '../store.dart';
 import '../widgets/ui.dart';
 
 class IzinScreen extends StatelessWidget {
-  const IzinScreen({super.key, required this.store});
+  const IzinScreen({super.key, required this.store, this.bottomBarHeight = 76});
 
   final AppStore store;
+  final double bottomBarHeight;
 
   Future<void> _openForm(BuildContext context) async {
     if (store.leaveTypes.isEmpty) {
@@ -31,7 +31,7 @@ class IzinScreen extends StatelessWidget {
       isScrollControlled: true,
       backgroundColor: Theme.of(context).colorScheme.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) {
         final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
@@ -53,7 +53,7 @@ class IzinScreen extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Izin & Cuti'),
+            title: const Text('Izin & cuti'),
             actions: [
               IconButton(
                 tooltip: 'Muat ulang',
@@ -62,105 +62,148 @@ class IzinScreen extends StatelessWidget {
               ),
             ],
           ),
-          floatingActionButton: FloatingActionButton.extended(
-            heroTag: 'ajukan-izin',
-            backgroundColor: colors.primary,
-            foregroundColor: colors.onPrimary,
-            onPressed: () => _openForm(context),
-            icon: const Icon(Icons.add),
-            label: const Text('Ajukan Izin'),
-          ),
-          body: ResponsivePage(
-            child: RefreshIndicator(
-              onRefresh: store.refresh,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
-                children: [
-                  if (store.error != null) ...[
-                    ErrorBanner(message: store.error!, onRetry: store.refresh),
-                    const SizedBox(height: 12),
-                  ],
-                  if (leaves.isEmpty)
-                    const SectionCard(
-                      child: EmptyState(
-                        icon: Icons.event_note_outlined,
-                        message: 'Belum ada pengajuan izin. Tekan tombol Ajukan Izin di bawah.',
-                      ),
-                    )
-                  else
-                    ...leaves.map((leave) => _leaveTile(context, leave)),
-                ],
+          body: Stack(
+            children: [
+              ResponsivePage(
+                child: RefreshIndicator(
+                  onRefresh: store.refresh,
+                  child: ListView(
+                    padding: EdgeInsets.fromLTRB(
+                      16,
+                      12,
+                      16,
+                      bottomBarHeight + 80,
+                    ),
+                    children: [
+                      if (store.error != null) ...[
+                        ErrorBanner(
+                          message: store.error!,
+                          onRetry: store.refresh,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      if (store.loading && leaves.isEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 60),
+                          child: Center(
+                            child: CircularProgressIndicator(
+                              color: colors.primary,
+                            ),
+                          ),
+                        )
+                      else if (leaves.isEmpty)
+                        const SectionCard(
+                          child: EmptyState(
+                            icon: Icons.event_note_outlined,
+                            message:
+                                'Belum ada pengajuan izin. Mulai dari tombol Ajukan izin.',
+                          ),
+                        )
+                      else
+                        _leavesCard(context, leaves),
+                    ],
+                  ),
+                ),
               ),
-            ),
+              Positioned(
+                right: 16,
+                bottom: bottomBarHeight + 12,
+                child: FloatingActionButton.extended(
+                  heroTag: 'ajukan-izin',
+                  backgroundColor: colors.primary,
+                  foregroundColor: colors.onPrimary,
+                  onPressed: () => _openForm(context),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Ajukan izin'),
+                ),
+              ),
+            ],
           ),
         );
       },
     );
   }
 
-  Widget _leaveTile(BuildContext context, LeaveRecord leave) {
+  Widget _leavesCard(BuildContext context, List<LeaveRecord> leaves) {
+    final colors = Theme.of(context).colorScheme;
+    final children = <Widget>[];
+
+    for (var i = 0; i < leaves.length; i++) {
+      children.add(_leaveRow(context, leaves[i]));
+      if (i < leaves.length - 1) {
+        children.add(Divider(height: 1, color: colors.outline));
+      }
+    }
+
+    return SectionCard(
+      padding: EdgeInsets.zero,
+      child: Column(children: children),
+    );
+  }
+
+  Widget _leaveRow(BuildContext context, LeaveRecord leave) {
     final colors = Theme.of(context).colorScheme;
     final range = leave.startDate == leave.endDate
         ? prettyDate(leave.startDate)
         : '${prettyDate(leave.startDate)} - ${prettyDate(leave.endDate)}';
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: SectionCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    leave.type ?? 'Izin',
-                    style: TextStyle(
-                      fontSize: 14.5,
-                      fontWeight: FontWeight.w700,
-                      color: colors.onSurface,
-                    ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  leave.type ?? 'Izin',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: colors.onSurface,
                   ),
                 ),
-                StatusChip(
-                  label: leave.status,
-                  color: StatusChip.forStatus(leave.status),
-                  dense: true,
-                ),
-              ],
-            ),
-            const SizedBox(height: 6),
+              ),
+              const SizedBox(width: 8),
+              StatusLabel(status: leave.status, dense: true),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$range · ${leave.days} hari kerja',
+            style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+          ),
+          if (leave.note != null && leave.note!.isNotEmpty) ...[
+            const SizedBox(height: 8),
             Text(
-              '$range · ${leave.days} hari kerja',
-              style: TextStyle(fontSize: 12.5, color: colors.onSurfaceVariant),
+              leave.note!,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: colors.onSurface,
+                height: 1.4,
+              ),
             ),
-            if (leave.note != null && leave.note!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                leave.note!,
+          ],
+          if (leave.reason != null && leave.reason!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: colors.error.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                'Alasan ditolak: ${leave.reason}',
                 style: TextStyle(
-                  fontSize: 13,
-                  color: colors.onSurface,
+                  fontSize: 12,
+                  color: colors.error,
                   height: 1.35,
                 ),
               ),
-            ],
-            if (leave.reason != null && leave.reason!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: errorMain.withValues(alpha: 0.07),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'Alasan ditolak: ${leave.reason}',
-                  style: const TextStyle(fontSize: 12.5, color: errorMain),
-                ),
-              ),
-            ],
+            ),
           ],
-        ),
+        ],
       ),
     );
   }
@@ -262,12 +305,13 @@ class _LeaveFormState extends State<_LeaveForm> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const CardTitle(
-                title: 'Ajukan Izin',
-                subtitle: 'Pengajuan diperiksa oleh admin sebelum disetujui.',
+                title: 'Ajukan izin',
+                subtitle: 'Pengajuan diperiksa admin sebelum disetujui.',
               ),
               const SizedBox(height: 16),
               DropdownButtonFormField<LeaveTypeOption>(
                 initialValue: _type,
+                decoration: const InputDecoration(labelText: 'Jenis izin'),
                 items: widget.store.leaveTypes
                     .map(
                       (type) => DropdownMenuItem(
@@ -279,7 +323,6 @@ class _LeaveFormState extends State<_LeaveForm> {
                       ),
                     )
                     .toList(),
-                hint: const Text('Pilih jenis izin'),
                 onChanged: (value) => setState(() => _type = value),
               ),
               const SizedBox(height: 12),
@@ -308,7 +351,8 @@ class _LeaveFormState extends State<_LeaveForm> {
                 maxLines: 3,
                 maxLength: 1000,
                 decoration: const InputDecoration(
-                  hintText: 'Keterangan izin',
+                  labelText: 'Keterangan',
+                  hintText: 'Contoh: sakit demam, surat dokter menyusul.',
                   alignLabelWithHint: true,
                 ),
               ),
@@ -316,7 +360,10 @@ class _LeaveFormState extends State<_LeaveForm> {
                 const SizedBox(height: 4),
                 Text(
                   _error!,
-                  style: const TextStyle(fontSize: 12.5, color: errorMain),
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                 ),
               ],
               const SizedBox(height: 12),
@@ -343,7 +390,7 @@ class _LeaveFormState extends State<_LeaveForm> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text('Kirim Pengajuan'),
+                          : const Text('Kirim pengajuan'),
                     ),
                   ),
                 ],
@@ -359,6 +406,7 @@ class _LeaveFormState extends State<_LeaveForm> {
     final colors = Theme.of(context).colorScheme;
     return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
       child: InputDecorator(
         decoration: InputDecoration(labelText: label),
         child: Text(

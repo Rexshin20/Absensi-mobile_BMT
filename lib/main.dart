@@ -179,7 +179,10 @@ class _RootShellState extends State<RootShell> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomBarHeight = 76 + MediaQuery.paddingOf(context).bottom;
+
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(
         index: _index,
         children: [
@@ -190,7 +193,10 @@ class _RootShellState extends State<RootShell> {
             onOpenRiwayat: () => setState(() => _index = 1),
           ),
           RiwayatScreen(store: widget.store),
-          IzinScreen(store: widget.store),
+          IzinScreen(
+            store: widget.store,
+            bottomBarHeight: bottomBarHeight,
+          ),
           ProfilScreen(
             store: widget.store,
             onLoggedOut: widget.onLoggedOut,

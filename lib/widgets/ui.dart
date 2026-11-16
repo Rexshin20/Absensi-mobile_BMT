@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../app_theme.dart';
-
 class ResponsivePage extends StatelessWidget {
   const ResponsivePage({super.key, required this.child, this.maxWidth = 560});
 
@@ -34,7 +32,7 @@ class SectionCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: colors.outline),
       ),
       child: child,
@@ -68,17 +66,18 @@ class CardTitle extends StatelessWidget {
                 title,
                 style: TextStyle(
                   fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w700,
                   color: colors.onSurface,
                 ),
               ),
               if (subtitle != null) ...[
-                const SizedBox(height: 2),
+                const SizedBox(height: 3),
                 Text(
                   subtitle!,
                   style: TextStyle(
                     fontSize: 12,
                     color: colors.onSurfaceVariant,
+                    height: 1.35,
                   ),
                 ),
               ],
@@ -91,45 +90,22 @@ class CardTitle extends StatelessWidget {
   }
 }
 
-class InfoRow extends StatelessWidget {
-  const InfoRow({
-    super.key,
-    required this.label,
-    required this.value,
-    this.labelWidth = 110,
-  });
-
-  final String label;
-  final String value;
-  final double labelWidth;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: labelWidth,
-            child: Text(
-              label,
-              style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(fontSize: 13, color: colors.onSurface),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+/// Warna status untuk teks, sudah disesuaikan per tema agar lolos kontras.
+Color statusColor(BuildContext context, String status) {
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  return switch (status) {
+    'Hadir' || 'Disetujui' => dark
+        ? const Color(0xFF7BD8A2)
+        : const Color(0xFF1F6B3B),
+    'Terlambat' || 'Menunggu' => dark
+        ? const Color(0xFFF0B34A)
+        : const Color(0xFF9A5B00),
+    'Ditolak' => dark ? const Color(0xFFFF9A90) : const Color(0xFFA3241B),
+    _ => Theme.of(context).colorScheme.onSurfaceVariant,
+  };
 }
 
+/// Chip status ringkas untuk baris yang padat.
 class StatusChip extends StatelessWidget {
   const StatusChip({
     super.key,
@@ -163,128 +139,101 @@ class StatusChip extends StatelessWidget {
       ),
     );
   }
-
-  static Color forStatus(String status) => switch (status) {
-    'Hadir' => successMain,
-    'Terlambat' => errorMain,
-    'Disetujui' => successMain,
-    'Menunggu' => warningMain,
-    'Ditolak' => errorMain,
-    _ => textMuted,
-  };
 }
 
-class StatBox extends StatelessWidget {
-  const StatBox({
-    super.key,
-    required this.value,
-    required this.label,
-    required this.color,
-  });
+/// Status dibaca dari teksnya, bukan hanya dari warna titiknya.
+class StatusLabel extends StatelessWidget {
+  const StatusLabel({super.key, required this.status, this.dense = false});
 
-  final String value;
-  final String label;
-  final Color color;
+  final String status;
+  final bool dense;
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Column(
+    final color = statusColor(context, status);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
+        Container(
+          width: 7,
+          height: 7,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        SizedBox(width: dense ? 5 : 6),
         Text(
-          value,
+          status,
           style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w700,
+            fontSize: dense ? 11 : 11.5,
+            fontWeight: FontWeight.w600,
             color: color,
           ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 11.5, color: colors.onSurfaceVariant),
         ),
       ],
     );
   }
 }
 
-class StatGrid extends StatelessWidget {
-  const StatGrid({super.key, required this.items, this.compact = false});
-
-  final List<StatGridItem> items;
-  final bool compact;
-
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) {
-      final columns = constraints.maxWidth < 380 ? 2 : 4;
-      return GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: items.length,
-        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: columns,
-          crossAxisSpacing: 10,
-          mainAxisSpacing: 10,
-          childAspectRatio: columns == 2
-              ? (compact ? 2.8 : 2.4)
-              : (compact ? 1.85 : 1.65),
-        ),
-        itemBuilder: (context, index) {
-          final item = items[index];
-          final colors = Theme.of(context).colorScheme;
-          return Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: compact ? 10 : 12,
-              vertical: compact ? 6 : 8,
-            ),
-            decoration: BoxDecoration(
-              color: item.color.withValues(alpha: 0.07),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Text(
-                  item.value,
-                  style: TextStyle(
-                    fontSize: compact ? 18 : 20,
-                    fontWeight: FontWeight.w700,
-                    color: item.color,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    item.label,
-                    maxLines: 2,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: colors.onSurfaceVariant,
-                      height: 1.2,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    },
-  );
-}
-
-class StatGridItem {
-  const StatGridItem({
+class LedgerMetric {
+  const LedgerMetric({
     required this.value,
     required this.label,
-    required this.color,
+    this.alert = false,
   });
 
-  final String value;
+  final int value;
   final String label;
-  final Color color;
+  final bool alert;
+}
+
+/// Strip ringkasan bergaya buku besar: angka tabular dipisah garis tipis.
+class MonthLedger extends StatelessWidget {
+  const MonthLedger({super.key, required this.items});
+
+  final List<LedgerMetric> items;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final children = <Widget>[];
+    for (var i = 0; i < items.length; i++) {
+      if (i > 0) {
+        children.add(Container(width: 1, height: 34, color: colors.outline));
+      }
+      children.add(Expanded(child: _metric(context, items[i])));
+    }
+
+    return Row(children: children);
+  }
+
+  Widget _metric(BuildContext context, LedgerMetric item) {
+    final colors = Theme.of(context).colorScheme;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          '${item.value}',
+          style: TextStyle(
+            fontSize: 21,
+            fontWeight: FontWeight.w800,
+            color: item.alert
+                ? statusColor(context, 'Terlambat')
+                : colors.onSurface,
+            fontFeatures: const [FontFeature.tabularFigures()],
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          item.label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 11,
+            color: colors.onSurfaceVariant,
+            height: 1.2,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class EmptyState extends StatelessWidget {
@@ -297,15 +246,19 @@ class EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 36),
+      padding: const EdgeInsets.symmetric(vertical: 32),
       child: Column(
         children: [
-          Icon(icon, size: 40, color: colors.onSurfaceVariant),
+          Icon(icon, size: 36, color: colors.onSurfaceVariant),
           const SizedBox(height: 10),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
+            style: TextStyle(
+              fontSize: 12.5,
+              color: colors.onSurfaceVariant,
+              height: 1.4,
+            ),
           ),
         ],
       ),
@@ -325,13 +278,13 @@ class ErrorBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: errorMain.withValues(alpha: 0.08),
+        color: colors.error.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: errorMain.withValues(alpha: 0.3)),
+        border: Border.all(color: colors.error.withValues(alpha: 0.35)),
       ),
       child: Row(
         children: [
-          const Icon(Icons.error_outline, size: 20, color: errorMain),
+          Icon(Icons.error_outline, size: 20, color: colors.error),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -340,7 +293,11 @@ class ErrorBanner extends StatelessWidget {
             ),
           ),
           if (onRetry != null)
-            TextButton(onPressed: onRetry, child: const Text('Coba lagi')),
+            TextButton(
+              onPressed: onRetry,
+              style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+              child: const Text('Coba lagi'),
+            ),
         ],
       ),
     );

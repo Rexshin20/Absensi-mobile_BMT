@@ -96,7 +96,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF159957), brandDark],
+          colors: [brandPrimary, brandDark],
         ),
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
@@ -246,7 +246,7 @@ class _BerandaScreenState extends State<BerandaScreen> {
               if (alreadyIn)
                 StatusChip(
                   label: today.status,
-                  color: StatusChip.forStatus(today.status),
+                  color: statusColor(context, today.status),
                   dense: true,
                 ),
             ],

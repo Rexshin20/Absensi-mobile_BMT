@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../api.dart';
-import '../app_theme.dart';
 import '../formatters.dart';
 import '../store.dart';
 import '../widgets/ui.dart';
@@ -26,7 +25,7 @@ class RiwayatScreen extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Riwayat Absen'),
+            title: const Text('Riwayat absen'),
             actions: [
               IconButton(
                 tooltip: 'Muat ulang',
@@ -39,79 +38,47 @@ class RiwayatScreen extends StatelessWidget {
             child: RefreshIndicator(
               onRefresh: store.refresh,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 104),
                 children: [
-                  SectionCard(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 10,
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          tooltip: 'Bulan sebelumnya',
-                          onPressed: () =>
-                              store.loadMonth(_shiftMonth(store.month, -1)),
-                          icon: const Icon(Icons.chevron_left),
-                        ),
-                        Expanded(
-                          child: Text(
-                            monthLabel(store.month),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Theme.of(context).colorScheme.onSurface,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Bulan berikutnya',
-                          onPressed: () =>
-                              store.loadMonth(_shiftMonth(store.month, 1)),
-                          icon: const Icon(Icons.chevron_right),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 12),
+                  _monthBar(context),
+                  const SizedBox(height: 8),
+                  if (store.error != null) ...[
+                    ErrorBanner(message: store.error!, onRetry: store.refresh),
+                    const SizedBox(height: 12),
+                  ],
                   if (history == null)
-                    store.error != null
-                        ? ErrorBanner(
-                            message: store.error!,
-                            onRetry: store.refresh,
-                          )
-                        : const Padding(
-                            padding: EdgeInsets.only(top: 60),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                color: brandPrimary,
-                              ),
-                            ),
-                          )
+                    Padding(
+                      padding: const EdgeInsets.only(top: 60),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    )
                   else ...[
                     SectionCard(
-                      child: StatGrid(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 14,
+                      ),
+                      child: MonthLedger(
                         items: [
-                          StatGridItem(
-                            value: '${history.summary.present}',
-                            label: 'Tepat Waktu',
-                            color: successMain,
+                          LedgerMetric(
+                            value: history.summary.present,
+                            label: 'Tepat waktu',
                           ),
-                          StatGridItem(
-                            value: '${history.summary.late}',
+                          LedgerMetric(
+                            value: history.summary.late,
                             label: 'Terlambat',
-                            color: errorMain,
+                            alert: history.summary.late > 0,
                           ),
-                          StatGridItem(
-                            value: '${history.summary.leave}',
-                            label: 'Hari Izin',
-                            color: warningMain,
+                          LedgerMetric(
+                            value: history.summary.leave,
+                            label: 'Hari izin',
                           ),
-                          StatGridItem(
-                            value: '${history.summary.workDays}',
-                            label: 'Hari Kerja',
-                            color: brandPrimary,
+                          LedgerMetric(
+                            value: history.summary.workDays,
+                            label: 'Hari kerja',
                           ),
                         ],
                       ),
@@ -125,9 +92,7 @@ class RiwayatScreen extends StatelessWidget {
                         ),
                       )
                     else
-                      ...history.records.map(
-                        (record) => _recordTile(context, record),
-                      ),
+                      _recordsCard(context, history.records),
                   ],
                 ],
               ),
@@ -138,79 +103,108 @@ class RiwayatScreen extends StatelessWidget {
     );
   }
 
-  Widget _recordTile(BuildContext context, AttendanceRecord record) {
+  Widget _monthBar(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: SectionCard(
-        padding: const EdgeInsets.all(12),
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final details = Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    prettyDate(record.date),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: colors.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    '${record.checkInTime} WIB · ${record.office ?? 'tanpa lokasi'} · '
-                    '${record.distanceM == null ? '-' : '${record.distanceM} m'}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    'Sumber: ${record.source ?? '-'}',
-                    style: TextStyle(
-                      fontSize: 11.5,
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              ),
-            );
-            final thumbnail = _thumbnail(context, record.photoUrl);
-            final status = StatusChip(
-              label: record.status,
-              color: StatusChip.forStatus(record.status),
-              dense: true,
-            );
-
-            if (constraints.maxWidth < 360) {
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [thumbnail, const SizedBox(width: 12), details],
-                  ),
-                  const SizedBox(height: 10),
-                  Align(alignment: Alignment.centerRight, child: status),
-                ],
-              );
-            }
-
-            return Row(
-              children: [
-                thumbnail,
-                const SizedBox(width: 12),
-                details,
-                const SizedBox(width: 8),
-                status,
-              ],
-            );
-          },
+    return Row(
+      children: [
+        IconButton(
+          tooltip: 'Bulan sebelumnya',
+          onPressed: () => store.loadMonth(_shiftMonth(store.month, -1)),
+          icon: const Icon(Icons.chevron_left),
         ),
+        Expanded(
+          child: Text(
+            monthLabel(store.month),
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: colors.onSurface,
+            ),
+          ),
+        ),
+        IconButton(
+          tooltip: 'Bulan berikutnya',
+          onPressed: () => store.loadMonth(_shiftMonth(store.month, 1)),
+          icon: const Icon(Icons.chevron_right),
+        ),
+      ],
+    );
+  }
+
+  Widget _recordsCard(BuildContext context, List<AttendanceRecord> records) {
+    final colors = Theme.of(context).colorScheme;
+    final children = <Widget>[];
+
+    for (var i = 0; i < records.length; i++) {
+      children.add(_recordRow(context, records[i]));
+      if (i < records.length - 1) {
+        children.add(
+          Padding(
+            padding: const EdgeInsets.only(left: 68),
+            child: Divider(height: 1, color: colors.outline),
+          ),
+        );
+      }
+    }
+
+    return SectionCard(
+      padding: EdgeInsets.zero,
+      child: Column(children: children),
+    );
+  }
+
+  Widget _recordRow(BuildContext context, AttendanceRecord record) {
+    final colors = Theme.of(context).colorScheme;
+    final meta =
+        '${record.checkInTime} WIB · ${record.office ?? 'tanpa lokasi'} · '
+        '${record.distanceM == null ? '-' : '${record.distanceM} m'} · '
+        '${record.source ?? '-'}';
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _thumbnail(context, record.photoUrl),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        prettyDate(record.date),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w600,
+                          color: colors.onSurface,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    StatusLabel(status: record.status, dense: true),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  meta,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    height: 1.35,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -219,8 +213,8 @@ class RiwayatScreen extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     if (url == null) {
       return Container(
-        width: 46,
-        height: 46,
+        width: 44,
+        height: 44,
         decoration: BoxDecoration(
           color: colors.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(8),
@@ -238,19 +232,20 @@ class RiwayatScreen extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       child: Image.network(
         url,
-        width: 46,
-        height: 46,
+        width: 44,
+        height: 44,
         fit: BoxFit.cover,
+        semanticLabel: 'Foto absen',
         loadingBuilder: (context, child, progress) => progress == null
             ? child
             : Container(
-                width: 46,
-                height: 46,
+                width: 44,
+                height: 44,
                 color: colors.surfaceContainerHighest,
               ),
         errorBuilder: (context, error, stack) => Container(
-          width: 46,
-          height: 46,
+          width: 44,
+          height: 44,
           color: colors.surfaceContainerHighest,
           child: Icon(
             Icons.broken_image_outlined,
