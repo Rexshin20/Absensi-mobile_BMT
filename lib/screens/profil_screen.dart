@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_theme.dart';
 import '../formatters.dart';
+import '../push.dart';
 import '../store.dart';
 import '../widgets/ui.dart';
 
@@ -56,6 +57,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
     setState(() => _loggingOut = true);
     try {
       await widget.store.logout();
+      await PushNotifications.logout();
       if (!context.mounted) return;
       widget.onLoggedOut();
     } catch (error, stackTrace) {

@@ -1,8 +1,10 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
 import 'theme_preferences.dart';
 import 'api.dart';
 import 'app_theme.dart';
+import 'push.dart';
 import 'screens/absen_screen.dart';
 import 'screens/beranda_screen.dart';
 import 'screens/izin_screen.dart';
@@ -13,7 +15,9 @@ import 'store.dart';
 import 'widgets/absen_bottom_bar.dart';
 import 'widgets/app_splash_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const AbsensiApp());
 }
 
@@ -110,6 +114,8 @@ class _AuthGateState extends State<AuthGate> {
       _signedIn = signedIn;
       _restoring = false;
     });
+
+    if (signedIn) PushNotifications.sync();
   }
 
   Future<void> _signIn() async {
@@ -123,6 +129,7 @@ class _AuthGateState extends State<AuthGate> {
     }
     if (!mounted) return;
     setState(() => _signedIn = true);
+    PushNotifications.sync();
   }
 
   void _signOut() {

@@ -413,6 +413,14 @@ class ApiClient {
     return (data as Map<String, dynamic>)['message'] as String;
   }
 
+  Future<void> registerDeviceToken(String token) async {
+    await _request(
+      'POST',
+      '/device-token',
+      body: {'token': token, 'platform': 'android'},
+    );
+  }
+
   Future<void> logout() async {
     try {
       await _request('POST', '/logout');
